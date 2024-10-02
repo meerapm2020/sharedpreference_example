@@ -109,9 +109,6 @@ class _TodoListState extends State<TodoList> {
                       child: CircleAvatar(
                         radius: 15,
                         backgroundColor: _colorlist[index],
-                        child: _selectedColor == _colorlist[index]
-                            ? Icon(Icons.check, color: Colors.white)
-                            : null,
                       ),
                     );
                   },
