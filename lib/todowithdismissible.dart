@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class TodoList extends StatefulWidget {
+class TodoListNew extends StatefulWidget {
   @override
-  _TodoListState createState() => _TodoListState();
+  _TodoListNewState createState() => _TodoListNewState();
 }
 
-class _TodoListState extends State<TodoList> {
+class _TodoListNewState extends State<TodoListNew> {
   List<Map<String, dynamic>> _todoItems = [];
   Color _selectedColor = Colors.blue;
   List<Color> _colorlist = [
@@ -24,32 +24,45 @@ class _TodoListState extends State<TodoList> {
     _loadTodoItems();
   }
 
+  // Load items from SharedPreferences
   _loadTodoItems() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    List<String>? tasks = prefs.getStringList('todoItems');
-    List<String>? colors = prefs.getStringList('todoColors');
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
 
-    if (tasks != null && colors != null) {
-      setState(() {
-        _todoItems = List.generate(tasks.length, (index) {
-          return {
-            'task': tasks[index],
-            'color': Color(int.parse(colors[index]))
-          };
+      List<String>? tasks = prefs.getStringList('todoItems');
+      List<String>? colors = prefs.getStringList('todoColors');
+
+      if (tasks != null && colors != null) {
+        setState(() {
+          _todoItems = List.generate(tasks.length, (index) {
+            return {
+              'task': tasks[index],
+              'color': Color(int.parse(colors[index])),
+            };
+          });
         });
-      });
+      }
+    } catch (e) {
+      print("Error loading todo items: $e");
     }
   }
 
   _saveTodoItems() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    List<String> tasks =
-        _todoItems.map((item) => item['task'] as String).toList();
-    List<String> colors =
-        _todoItems.map((item) => (item['color'] as Color).toString()).toList();
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
 
-    prefs.setStringList('todoItems', tasks);
-    prefs.setStringList('todoColors', colors);
+      List<String> tasks =
+          _todoItems.map((item) => item['task'] as String).toList();
+      List<String> colors = _todoItems.map((item) {
+        final Color color = item['color'] as Color;
+        return color.value.toString();
+      }).toList();
+
+      await prefs.setStringList('todoItems', tasks);
+      await prefs.setStringList('todoColors', colors);
+    } catch (e) {
+      print("Error saving todo items: $e");
+    }
   }
 
   void _addTodoItem(String task) {
@@ -61,21 +74,13 @@ class _TodoListState extends State<TodoList> {
     }
   }
 
-  void _removeTodoItem(int index) {
-    setState(() {
-      _todoItems.removeAt(index);
-    });
-    _saveTodoItems();
-  }
-
   void _promptAddTodoItem() {
     String newTask = "";
     showModalBottomSheet(
       context: context,
       builder: (BuildContext context) {
         return Container(
-          height: 500,
-          width: double.infinity,
+          height: 300,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -117,7 +122,7 @@ class _TodoListState extends State<TodoList> {
                 child: Text('Add'),
                 onPressed: () {
                   if (newTask.isNotEmpty) {
-                    _addTodoItem(newTask); // Add the task
+                    _addTodoItem(newTask);
                     Navigator.of(context).pop();
                   }
                 },
@@ -136,27 +141,43 @@ class _TodoListState extends State<TodoList> {
         title: Text('To-Do List'),
       ),
       body: ListView.builder(
-        itemCount: _todoItems.length, // Number of to-do items
+        itemCount: _todoItems.length,
         itemBuilder: (context, index) {
-          return Padding(
-            padding: const EdgeInsets.all(15.0),
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(15),
-                color: _todoItems[index]
-                    ['color'], // Use color for task background
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Row(
-                  children: [
-                    Text(_todoItems[index]['task']), // Display the task
-                    Spacer(),
-                    IconButton(
-                      icon: Icon(Icons.delete),
-                      onPressed: () => _removeTodoItem(index), // Remove item
-                    ),
-                  ],
+          return Dismissible(
+            key: Key(_todoItems[index]['task']),
+            direction: DismissDirection.endToStart,
+            onDismissed: (direction) {
+              setState(() {
+                _todoItems.removeAt(index);
+                _saveTodoItems();
+              });
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Item deleted'),
+                ),
+              );
+            },
+            background: Container(
+              color: Colors.red,
+              alignment: Alignment.centerRight,
+              padding: EdgeInsets.symmetric(horizontal: 20.0),
+              child: Icon(Icons.delete, color: Colors.white),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(15.0),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(15),
+                  color: _todoItems[index]['color'],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Row(
+                    children: [
+                      Text(_todoItems[index]['task']),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -164,7 +185,7 @@ class _TodoListState extends State<TodoList> {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _promptAddTodoItem, // Add new task on button press
+        onPressed: _promptAddTodoItem,
         tooltip: 'Add Task',
         child: Icon(Icons.add),
       ),

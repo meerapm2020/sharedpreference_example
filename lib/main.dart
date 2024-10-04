@@ -6,6 +6,7 @@ import 'package:shared_preferences_examples/storing_list.dart';
 
 import 'package:shared_preferences_examples/storing_string.dart';
 import 'package:shared_preferences_examples/todo.dart';
+import 'package:shared_preferences_examples/todowithdismissible.dart';
 
 void main() => runApp(MyApp());
 
@@ -14,7 +15,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: TodoList(),
+      home: TodoListNew(),
     );
   }
 }
